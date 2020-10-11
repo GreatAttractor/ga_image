@@ -1,0 +1,7 @@
+[package]
+name = "ga_image"
+version = "0.1.0"
+authors = ["Filip Szczerek <ga.software@yahoo.com>"]
+
+[dependencies]
+num-traits = "0.2.12"
