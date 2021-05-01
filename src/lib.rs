@@ -1053,11 +1053,11 @@ impl Image {
                     macro_rules! src { () => { unsafe { slice::from_raw_parts(self.pixels[src_ofs..].as_ptr() as *const u8, 3) } }};
 
                     match dest_img.pix_fmt {
-                        PixelFormat::Mono8 => convert_whole_line!({ dest!(1, u8)[0] = (src!()[0] + src!()[1] + src!()[2]) / 3; }),
+                        PixelFormat::Mono8 => convert_whole_line!({ dest!(1, u8)[0] = ((src!()[0] as u16 + src!()[1] as u16 + src!()[2] as u16) / 3) as u8; }),
 
-                        PixelFormat::Mono16 => convert_whole_line!({ dest!(1, u16)[0] = (src!()[0] + src!()[1] + src!()[2]) as u16 / 3 * 0xFF; }),
+                        PixelFormat::Mono16 => convert_whole_line!({ dest!(1, u16)[0] = (src!()[0] as u16 + src!()[1] as u16 + src!()[2] as u16) / 3 * 0xFF; }),
 
-                        PixelFormat::Mono32f => convert_whole_line!({ dest!(1, f32)[0] = (src!()[0] + src!()[1] + src!()[2]) as f32 / (3.0 * 0xFF as f32); }),
+                        PixelFormat::Mono32f => convert_whole_line!({ dest!(1, f32)[0] = (src!()[0] as u16 + src!()[1] as u16 + src!()[2] as u16) as f32 / (3.0 * 0xFF as f32); }),
 
                         PixelFormat::BGRA8 =>
                             convert_whole_line!({
@@ -1097,11 +1097,11 @@ impl Image {
                     macro_rules! src { () => { unsafe { slice::from_raw_parts(self.pixels[src_ofs..].as_ptr() as *const u8, 3) } }};
 
                     match dest_img.pix_fmt {
-                        PixelFormat::Mono8 => convert_whole_line!({ dest!(1, u8)[0] = (src!()[0] + src!()[1] + src!()[2]) / 3; }),
+                        PixelFormat::Mono8 => convert_whole_line!({ dest!(1, u8)[0] = ((src!()[0] as u16 + src!()[1] as u16 + src!()[2] as u16) / 3) as u8; }),
 
-                        PixelFormat::Mono16 => convert_whole_line!({ dest!(1, u16)[0] = (src!()[0] + src!()[1] + src!()[2]) as u16 / 3 * 0xFF; }),
+                        PixelFormat::Mono16 => convert_whole_line!({ dest!(1, u16)[0] = (src!()[0] as u16 + src!()[1] as u16 + src!()[2] as u16) / 3 * 0xFF; }),
 
-                        PixelFormat::Mono32f => convert_whole_line!({ dest!(1, f32)[0] = (src!()[0] + src!()[1] + src!()[2]) as f32 / (3.0 * 0xFF as f32); }),
+                        PixelFormat::Mono32f => convert_whole_line!({ dest!(1, f32)[0] = (src!()[0] as u16 + src!()[1] as u16 + src!()[2] as u16) as f32 / (3.0 * 0xFF as f32); }),
 
                         PixelFormat::BGRA8 =>
                             convert_whole_line!({
@@ -1145,7 +1145,7 @@ impl Image {
 
                         PixelFormat::Mono16 => convert_whole_line!({ dest!(1, u16)[0] = ((src!()[0] as u32 + src!()[1] as u32 + src!()[2] as u32) / 3) as u16; }),
 
-                        PixelFormat::Mono32f => convert_whole_line!({ dest!(1, f32)[0] = (src!()[0] + src!()[1] + src!()[2]) as f32 / (3.0 * 0xFFFF as f32); }),
+                        PixelFormat::Mono32f => convert_whole_line!({ dest!(1, f32)[0] = (src!()[0] as u32 + src!()[1] as u32 + src!()[2] as u32) as f32 / (3.0 * 0xFFFF as f32); }),
 
                         PixelFormat::BGRA8 =>
                             convert_whole_line!({
