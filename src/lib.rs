@@ -1521,7 +1521,13 @@ impl ImageView<'_> {
     }
 
     pub fn pixel_format(&self) -> PixelFormat {
-        self.image.pix_fmt
+        if !self.image.pix_fmt.is_cfa() {
+            self.image.pix_fmt
+        } else {
+            self.image.pix_fmt.set_cfa_pattern(
+                translate_CFA_pattern(self.image.pix_fmt.cfa_pattern(), self.fragment.x % 2, self.fragment.y % 2)
+            )
+        }
     }
 
     pub fn palette(&self) -> &Option<Palette> {
