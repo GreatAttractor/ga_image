@@ -26,11 +26,6 @@ macro_rules! upmult {
 #[macro_export]
 macro_rules! range { ($start:expr, $len:expr) => { $start .. $start + $len } }
 
-/// Returns ceil(a/b).
-macro_rules! updiv {
-    ($a:expr, $b:expr) => { (($a) + ($b) - 1) / ($b) }
-}
-
 pub fn read_struct<T, R: Read>(read: &mut R) -> io::Result<T> {
     let num_bytes = ::std::mem::size_of::<T>();
     unsafe {

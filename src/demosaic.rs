@@ -10,9 +10,8 @@
 //! Demosaicing of raw color images.
 //!
 
-use crate::{CFAPattern, Image, PixelFormat};
+use crate::{CFAPattern, Image};
 use num_traits::{AsPrimitive, PrimInt};
-use std::ops::{Add, Shr};
 
 //TODO: after verification, use unchecked accesses
 
@@ -48,9 +47,7 @@ fn get_two_lines_mut<T>(
 ///
 ///
 /// * `dx_r` - X offset of the red input pixel in a 2x2 block.
-/// * `dy_r` - Y offset of the red input pixel in a 2x2 block.
 /// * `dx_b` - X offset of the blue input pixel in a 2x2 block.
-/// * `dy_b` - Y offset of the blue input pixel in a 2x2 block.
 /// * `x` - X position of the block.
 /// * `src_r` - Source "red" row.
 /// * `src_r_m1` - Source row at y - 1 of source "red" row.
@@ -65,9 +62,7 @@ fn get_two_lines_mut<T>(
 ///
 fn demosaic_block_simple<T1: AsPrimitive<T2> + PrimInt, T2: PrimInt + 'static>(
     dx_r: usize,
-    dy_r: usize,
     dx_b: usize,
-    dy_b: usize,
     x: usize,
     src_r: &[T1],
     src_r_m1: &[T1],
@@ -180,7 +175,7 @@ fn demosaic<Source, Sum, Output>(
             let mut rgb_at_g_at_b_row = [Sum::zero(); 3]; // RGB values at green input pixel at blue row
 
             demosaic_block_simple(
-                dx_r, dy_r, dx_b, dy_b,
+                dx_r, dx_b,
                 x,
                 src_r, src_r_m1, src_r_p1,
                 src_b, src_b_m1, src_b_p1,
@@ -254,16 +249,16 @@ pub fn demosaic_raw16_as_rgb8(
 }
 
 /// Performs demosaicing of 8-bit `src` and saves as 8-bit mono in `dest`.
-pub fn demosaic_raw8_as_mono8(src: &Image, dest: &mut Image) {
+pub fn demosaic_raw8_as_mono8(_src: &Image, _dest: &mut Image) {
     panic!("Not implemented yet.");
 }
 
 /// Performs demosaicing of 16-bit `src` and saves as 16-bit RGB in `dest`.
-pub fn demosaic_raw16_as_rgb16(src: &Image, dest: &mut Image) {
+pub fn demosaic_raw16_as_rgb16(_src: &Image, _dest: &mut Image) {
     panic!("Not implemented yet.");
 }
 
 /// Performs demosaicing of 16-bit `src` and saves as 8-bit mono in `dest`.
-pub fn demosaic_raw16_as_mono8(src: &Image, dest: &mut Image) {
+pub fn demosaic_raw16_as_mono8(_src: &Image, _dest: &mut Image) {
     panic!("Not implemented yet.");
 }

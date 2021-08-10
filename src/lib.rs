@@ -40,9 +40,9 @@ fn file_type_from_ext(file_name: &str) -> FileType {
         Some(ext) => match ext.to_str().unwrap().to_lowercase().as_str() {
                          "bmp" => FileType::Bmp,
                          "tif" | "tiff" => FileType::Tiff,
-                         _ => panic!(format!("Unrecognized file extension: {}", ext.to_str().unwrap()))
+                         _ => panic!("Unrecognized file extension: {}", ext.to_str().unwrap())
                      },
-        _ => panic!(format!("No file extension in file name: {}", file_name))
+        _ => panic!("No file extension in file name: {}", file_name)
     }
 }
 
@@ -161,7 +161,7 @@ impl PixelFormat {
             PixelFormat::CfaGRBG16 => CFAPattern::GRBG,
             PixelFormat::CfaGBRG16 => CFAPattern::GBRG,
             PixelFormat::CfaBGGR16 => CFAPattern::BGGR,
-            _ => panic!(format!("Not a CFA pixel format: {:?}", self))
+            _ => panic!("Not a CFA pixel format: {:?}", self)
         }
     }
 
@@ -772,8 +772,7 @@ impl Image {
                 _ => unreachable!()
             }
         } else {
-            let src_pat_transl = translate_CFA_pattern(self.pix_fmt.cfa_pattern(), src_pos.x & 1, src_pos.y & 1);
-            let src_pix_fmt_transl = self.pix_fmt.set_cfa_pattern(src_pat_transl);
+            let src_pat_transl = translate_cfa_pattern(self.pix_fmt.cfa_pattern(), src_pos.x & 1, src_pos.y & 1);
 
             if self.pix_fmt.bytes_per_pixel() == 1 && dest_img.pix_fmt == PixelFormat::RGB8 {
                 demosaic::demosaic_raw8_as_rgb8(
@@ -853,7 +852,7 @@ impl Image {
                 actual_dest_pos.x as usize * dest_img.pix_fmt.bytes_per_pixel();
 
             /// Returns a slice of `dest_img`'s pixel values of type `T`, beginning at byte offset `dest_ofs`.
-            macro_rules! dest { ($len:expr, $T:ty) => { unsafe { slice::from_raw_parts_mut(dest_img.pixels[dest_ofs..].as_mut_ptr() as *mut $T, $len) } }};
+            macro_rules! dest { ($len:expr, $T:ty) => { unsafe { slice::from_raw_parts_mut(dest_img.pixels[dest_ofs..].as_mut_ptr() as *mut $T, $len) } }}
 
             /// Executes the code in block `b` in a loop encompassing a whole line of destination area in `dest_img`.
             macro_rules! convert_whole_line {
@@ -865,7 +864,7 @@ impl Image {
                         dest_ofs += dest_step;
                     }
                 }
-            };
+            }
 
             match src_pix_fmt {
                 PixelFormat::Mono8 => {
@@ -904,7 +903,7 @@ impl Image {
 
                 PixelFormat::Mono16 => {
                     /// Returns the current source pixel value as `u16`.
-                    macro_rules! src { () => { unsafe { *(self.pixels[src_ofs..].as_ptr() as *const u16) } }};
+                    macro_rules! src { () => { unsafe { *(self.pixels[src_ofs..].as_ptr() as *const u16) } }}
 
                     match dest_img.pix_fmt {
                         PixelFormat::Mono8 => convert_whole_line!({ dest!(1, u8)[0] = (src!() >> 8) as u8; }),
@@ -937,7 +936,7 @@ impl Image {
 
                 PixelFormat::Mono32f => {
                     /// Returns the current source pixel value as `f32`.
-                    macro_rules! src { () => { unsafe { *(self.pixels[src_ofs..].as_ptr() as *const f32) } }};
+                    macro_rules! src { () => { unsafe { *(self.pixels[src_ofs..].as_ptr() as *const f32) } }}
 
                     match dest_img.pix_fmt {
                         PixelFormat::Mono8 => convert_whole_line!({ dest!(1, u8)[0] = (src!() * 0xFF as f32) as u8; }),
@@ -968,7 +967,7 @@ impl Image {
 
                 PixelFormat::Mono64f => {
                     /// Returns the current source pixel value as `f64`.
-                    macro_rules! src { () => { unsafe { *(self.pixels[src_ofs..].as_ptr() as *const f64) } }};
+                    macro_rules! src { () => { unsafe { *(self.pixels[src_ofs..].as_ptr() as *const f64) } }}
 
                     match dest_img.pix_fmt {
 
@@ -1004,7 +1003,7 @@ impl Image {
                     let pal: &Palette = self.palette.iter().next().unwrap();
 
                     /// Returns the current source pixel converted to RGB (8-bit). Parameter `x` is from 0..3.
-                    macro_rules! src { ($x:expr) => { pal.pal[(3 * self.pixels[src_ofs]) as usize + $x] } };
+                    macro_rules! src { ($x:expr) => { pal.pal[(3 * self.pixels[src_ofs]) as usize + $x] } }
 
                     match dest_img.pix_fmt {
                         PixelFormat::Mono8 => convert_whole_line!({ dest!(1, u8)[0] = ((src!(0) as u32 + src!(1) as u32 + src!(2) as u32) / 3) as u8; }),
@@ -1050,7 +1049,7 @@ impl Image {
 
                 PixelFormat::RGB8 => {
                     /// Returns the current source pixel as `u8` RGB values.
-                    macro_rules! src { () => { unsafe { slice::from_raw_parts(self.pixels[src_ofs..].as_ptr() as *const u8, 3) } }};
+                    macro_rules! src { () => { unsafe { slice::from_raw_parts(self.pixels[src_ofs..].as_ptr() as *const u8, 3) } }}
 
                     match dest_img.pix_fmt {
                         PixelFormat::Mono8 => convert_whole_line!({ dest!(1, u8)[0] = ((src!()[0] as u16 + src!()[1] as u16 + src!()[2] as u16) / 3) as u8; }),
@@ -1094,7 +1093,7 @@ impl Image {
 
                 PixelFormat::BGR8 => {
                     /// Returns the current source pixel as `u8` BGR values.
-                    macro_rules! src { () => { unsafe { slice::from_raw_parts(self.pixels[src_ofs..].as_ptr() as *const u8, 3) } }};
+                    macro_rules! src { () => { unsafe { slice::from_raw_parts(self.pixels[src_ofs..].as_ptr() as *const u8, 3) } }}
 
                     match dest_img.pix_fmt {
                         PixelFormat::Mono8 => convert_whole_line!({ dest!(1, u8)[0] = ((src!()[0] as u16 + src!()[1] as u16 + src!()[2] as u16) / 3) as u8; }),
@@ -1138,7 +1137,7 @@ impl Image {
 
                 PixelFormat::RGB16 => {
                     /// Returns the current source pixel as `u16` RGB values.
-                    macro_rules! src { () => { unsafe { slice::from_raw_parts(self.pixels[src_ofs..].as_ptr() as *const u16, 3) } }};
+                    macro_rules! src { () => { unsafe { slice::from_raw_parts(self.pixels[src_ofs..].as_ptr() as *const u16, 3) } }}
 
                     match dest_img.pix_fmt {
                         PixelFormat::Mono8 => convert_whole_line!({ dest!(1, u8)[0] = (((src!()[0] as u32 + src!()[1] as u32 + src!()[2] as u32) / 3) >> 8) as u8; }),
@@ -1175,7 +1174,7 @@ impl Image {
 
                 PixelFormat::RGB32f => {
                     /// Returns the current source pixel as `f32` RGB values.
-                    macro_rules! src { () => { unsafe { slice::from_raw_parts(self.pixels[src_ofs..].as_ptr() as *const f32, 3) } }};
+                    macro_rules! src { () => { unsafe { slice::from_raw_parts(self.pixels[src_ofs..].as_ptr() as *const f32, 3) } }}
 
                     match dest_img.pix_fmt {
                         PixelFormat::Mono8 => convert_whole_line!({ dest!(1, u8)[0] = ((src!()[0] + src!()[1] + src!()[2]) * 0xFF as f32/3.0) as u8; }),
@@ -1216,7 +1215,7 @@ impl Image {
 
                 PixelFormat::RGB64f => {
                     /// Returns the current source pixel as `f64` RGB values.
-                    macro_rules! src { () => { unsafe { slice::from_raw_parts(self.pixels[src_ofs..].as_ptr() as *const f64, 3) } }};
+                    macro_rules! src { () => { unsafe { slice::from_raw_parts(self.pixels[src_ofs..].as_ptr() as *const f64, 3) } }}
 
                     match dest_img.pix_fmt {
                         PixelFormat::Mono8 => convert_whole_line!({ dest!(1, u8)[0] = ((src!()[0] + src!()[1] + src!()[2]) * 0xFF as f64/3.0) as u8; }),
@@ -1255,7 +1254,7 @@ impl Image {
                     }
                 },
 
-                _ => panic!(format!("Conversion from {:?} to {:?} not implemented yet.", self.pix_fmt, dest_img.pix_fmt))
+                _ => panic!("Conversion from {:?} to {:?} not implemented yet.", self.pix_fmt, dest_img.pix_fmt)
             }
         }
     }
@@ -1525,7 +1524,7 @@ impl ImageView<'_> {
             self.image.pix_fmt
         } else {
             self.image.pix_fmt.set_cfa_pattern(
-                translate_CFA_pattern(self.image.pix_fmt.cfa_pattern(), self.fragment.x % 2, self.fragment.y % 2)
+                translate_cfa_pattern(self.image.pix_fmt.cfa_pattern(), self.fragment.x % 2, self.fragment.y % 2)
             )
         }
     }
@@ -1576,7 +1575,7 @@ impl ImageView<'_> {
 }
 
 /// Returns `pattern` translated by (dx, dy), where dx, dy are 0 or 1.
-fn translate_CFA_pattern(pattern: CFAPattern, dx: i32, dy: i32) -> CFAPattern {
+fn translate_cfa_pattern(pattern: CFAPattern, dx: i32, dy: i32) -> CFAPattern {
     match (pattern, dx, dy) {
         (CFAPattern::BGGR, 0, 0) => CFAPattern::BGGR,
         (CFAPattern::BGGR, 1, 0) => CFAPattern::GBRG,
@@ -1598,6 +1597,6 @@ fn translate_CFA_pattern(pattern: CFAPattern, dx: i32, dy: i32) -> CFAPattern {
         (CFAPattern::RGGB, 0, 1) => CFAPattern::GBRG,
         (CFAPattern::RGGB, 1, 1) => CFAPattern::BGGR,
 
-        _ => panic!(format!("Invalid arguments: {:?}, {}, {}", pattern, dx, dy))
+        _ => panic!("Invalid arguments: {:?}, {}, {}", pattern, dx, dy)
     }
 }
