@@ -250,7 +250,16 @@ pub fn load_bmp(file_name: &str) -> Result<Image, BmpError> {
 
 
 pub fn save_bmp(img: &ImageView, file_name: &str) -> Result<(), BmpError> {
-    let pix_fmt = img.pixel_format();
+    let pix_fmt = match img.pixel_format() {
+        PixelFormat::Mono8 |
+        PixelFormat::Mono16 |
+        PixelFormat::RGB8 |
+        PixelFormat::RGB16 => img.pixel_format(),
+
+        pix_fmt if pix_fmt.is_cfa() => pix_fmt.cfa_as_mono(),
+
+        _ => return Err(BmpError::UnsupportedFormat)
+    };
 
     if ![PixelFormat::Pal8, PixelFormat::RGB8, PixelFormat::Mono8].contains(&pix_fmt) {
         return Err(BmpError::UnsupportedFormat);

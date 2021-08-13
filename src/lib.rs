@@ -250,6 +250,22 @@ impl PixelFormat {
             PixelFormat::RGB64f  => 24,
         }
     }
+
+    pub fn cfa_as_mono(&self) -> PixelFormat {
+        match self {
+            PixelFormat::CfaRGGB8  |
+            PixelFormat::CfaGRBG8  |
+            PixelFormat::CfaGBRG8  |
+            PixelFormat::CfaBGGR8 => PixelFormat::Mono8,
+
+            PixelFormat::CfaRGGB16 |
+            PixelFormat::CfaGRBG16 |
+            PixelFormat::CfaGBRG16 |
+            PixelFormat::CfaBGGR16 => PixelFormat::Mono16,
+
+            _ => panic!("Cannot interpret {:?} as mono.", self)
+        }
+    }
 }
 
 /// Demosaicing (debayering) method using when converting CFA images to Mono/RGB.

@@ -383,16 +383,17 @@ pub fn tiff_metadata(file_name: &str) -> Result<(u32, u32, PixelFormat, Option<P
     Ok((img_width.unwrap(), img_height.unwrap(), pix_fmt, None))
 }
 
-
-pub fn save_tiff(img: &ImageView, file_name: &str) -> Result<(), TiffError>   {
-    match img.pixel_format() {
+pub fn save_tiff(img: &ImageView, file_name: &str) -> Result<(), TiffError> {
+    let actual_pix_fmt = match img.pixel_format() {
         PixelFormat::Mono8 |
         PixelFormat::Mono16 |
         PixelFormat::RGB8 |
-        PixelFormat::RGB16 => { },
+        PixelFormat::RGB16 => img.pixel_format(),
 
-        _ => panic!()
-    }
+        pix_fmt if pix_fmt.is_cfa() => pix_fmt.cfa_as_mono(),
+
+        _ => return Err(TiffError::UnsupportedPixelFormat)
+    };
 
     let mut file = OpenOptions::new().read(false).write(true).create(true).open(file_name)?;
     let is_be = utils::is_machine_big_endian();
@@ -432,7 +433,7 @@ pub fn save_tiff(img: &ImageView, file_name: &str) -> Result<(), TiffError>   {
     field = TiffField { tag: TAG_BITS_PER_SAMPLE,
                         ftype: TAG_TYPE_WORD,
                         count: 1,
-                        value: img.pixel_format().bytes_per_channel() as u32 * 8 };
+                        value: actual_pix_fmt.bytes_per_channel() as u32 * 8 };
     if is_be { field.value <<= 16; }
     utils::write_struct(&field, &mut file)?;
 
@@ -446,7 +447,7 @@ pub fn save_tiff(img: &ImageView, file_name: &str) -> Result<(), TiffError>   {
     field = TiffField { tag: TAG_PHOTOMETRIC_INTERPRETATION,
                         ftype: TAG_TYPE_WORD,
                         count: 1,
-                        value: match img.pixel_format()
+                        value: match actual_pix_fmt
                                {
                                    PixelFormat::Mono8 | PixelFormat::Mono16 => PHMET_BLACK_IS_ZERO,
                                    PixelFormat::RGB8 | PixelFormat::RGB16 => PHMET_RGB,
@@ -471,7 +472,7 @@ pub fn save_tiff(img: &ImageView, file_name: &str) -> Result<(), TiffError>   {
     field = TiffField { tag: TAG_SAMPLES_PER_PIXEL,
                         ftype: TAG_TYPE_WORD,
                         count: 1,
-                        value: img.pixel_format().num_channels() as u32 };
+                        value: actual_pix_fmt.num_channels() as u32 };
     if is_be { field.value <<= 16; }
     utils::write_struct(&field, &mut file)?;
 
@@ -485,7 +486,7 @@ pub fn save_tiff(img: &ImageView, file_name: &str) -> Result<(), TiffError>   {
     field = TiffField { tag: TAG_STRIP_BYTE_COUNTS,
                         ftype: TAG_TYPE_DWORD,
                         count: 1,
-                        value: img.pixel_format().bytes_per_pixel() as u32 * img.width() * img.height() }; // There is only one strip for the whole image
+                        value: actual_pix_fmt.bytes_per_pixel() as u32 * img.width() * img.height() }; // There is only one strip for the whole image
     utils::write_struct(&field, &mut file)?;
 
     field = TiffField { tag: TAG_PLANAR_CONFIGURATION,
