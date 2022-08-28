@@ -245,7 +245,7 @@ impl PixelFormat {
             PixelFormat::RGBA16  => 8,
 
             PixelFormat::Mono32f => 4,
-            PixelFormat::RGB32f  => 16,
+            PixelFormat::RGB32f  => 12,
             PixelFormat::Mono64f => 8,
             PixelFormat::RGB64f  => 24,
         }
