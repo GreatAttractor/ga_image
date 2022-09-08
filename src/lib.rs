@@ -1588,6 +1588,10 @@ impl ImageView<'_> {
             self.fragment.width as usize * bytes_per_pix
         )]
     }
+
+    pub fn image(&self) -> &Image { self.image }
+
+    pub fn view_rect(&self) -> Rect { self.fragment }
 }
 
 /// Returns `pattern` translated by (dx, dy), where dx, dy are 0 or 1.
