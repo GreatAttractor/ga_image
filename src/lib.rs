@@ -731,46 +731,48 @@ impl Image {
     ///
     /// * `demosaic_method` - If `None` and the image is raw color, image is treated as mono.
     ///
-    pub fn convert_pix_fmt_of_subimage_into(&self,
-                                            dest_img: &mut Image,
-                                            src_pos: Point,
-                                            dest_pos: Point,
-                                            width: u32,
-                                            height: u32,
-                                            demosaic_method: Option<DemosaicMethod>) {
-
+    pub fn convert_pix_fmt_of_subimage_into(
+        &self,
+        dest_img: &mut Image,
+        src_pos: Point,
+        dest_pos: Point,
+        width: u32,
+        height: u32,
+        demosaic_method: Option<DemosaicMethod>
+    ) {
         // converting to Pal8 or raw color (CFA) is not supported
         assert!(!(dest_img.pix_fmt == PixelFormat::Pal8 && self.pix_fmt != PixelFormat::Pal8));
         assert!(!dest_img.pix_fmt.is_cfa());
 
-        // source position cropped so that the source rectangle fits in `src_img`
-        let mut actual_src_pos = [max(0, src_pos[X]),
-                                  max(0, src_pos[X])];
+        let desired_src = Rect{ x: src_pos[X], y: src_pos[Y], width, height };
+        let mut actual_src = match self.img_rect().intersection(&desired_src) {
+            Some(rect) => rect,
+            None => { return; }
+        };
 
-        let mut actual_width = min(width as i32, self.width as i32 - actual_src_pos[X]) as usize;
-        let mut actual_height = min(height as i32, self.width as i32 - actual_src_pos[Y]) as usize;
+        let src_pos_correction = [actual_src.x - desired_src.x, actual_src.y - desired_src.y];
 
-        // destination position based on `src_pos` and further cropped so that the dest. rectangle fits in `dest_img`
-        let mut actual_dest_pos = [dest_pos[X] + (src_pos[X] - actual_src_pos[X]),
-                                   dest_pos[Y] + (src_pos[Y] - actual_src_pos[Y])];
+        let desired_dest = Rect{
+            x: dest_pos[X] + src_pos_correction[X],
+            y: dest_pos[Y] + src_pos_correction[Y],
+            width: actual_src.width,
+            height: actual_src.height
+        };
 
-        if actual_dest_pos[X] >= dest_img.width as i32 ||
-           actual_dest_pos[Y] >= dest_img.height as i32 ||
-           actual_src_pos[X] >= self.width as i32 ||
-           actual_src_pos[Y] >= self.height as i32 {
+        let actual_dest = match dest_img.img_rect().intersection(&desired_dest) {
+            Some(rect) => rect,
+            None => { return; }
+        };
 
-            return;
-        }
+        let dest_pos_correction = [actual_dest.x - desired_dest.x, actual_dest.y - desired_dest.y];
 
-        actual_dest_pos[X] = max(0, actual_dest_pos[X]);
-        actual_dest_pos[Y] = max(0, actual_dest_pos[Y]);
+        actual_src.x += dest_pos_correction[X];
+        actual_src.y += dest_pos_correction[Y];
+        actual_src.width = actual_dest.width;
+        actual_src.height = actual_dest.height;
 
-        actual_width = min(actual_width as i32, dest_img.width as i32 - actual_dest_pos[X]) as usize;
-        actual_height = min(actual_height as i32, dest_img.height as i32 - actual_dest_pos[Y]) as usize;
-
-        // reflect in the source rectangle any cropping imposed by `dest_img`
-        actual_src_pos[X] += actual_dest_pos[X] - dest_pos[X];
-        actual_src_pos[Y] += actual_dest_pos[Y] - dest_pos[Y];
+        let actual_width = actual_src.width as usize;
+        let actual_height = actual_src.height as usize;
 
         let src_pix_fmt = if !self.pix_fmt.is_cfa() {
             self.pix_fmt
@@ -793,22 +795,22 @@ impl Image {
 
             if self.pix_fmt.bytes_per_pixel() == 1 && dest_img.pix_fmt == PixelFormat::RGB8 {
                 demosaic::demosaic_raw8_as_rgb8(
-                    width as usize,
-                    height as usize,
-                    &self.pixels[(src_pos[Y] * self.bytes_per_line as i32 + src_pos[X]) as usize..],
+                    actual_width as usize,
+                    actual_height as usize,
+                    &self.pixels[(actual_src.y * self.bytes_per_line as i32 + actual_src.x) as usize..],
                     self.bytes_per_line,
-                    &mut dest_img.pixels[(dest_pos[Y] * dest_img.bytes_per_line as i32 + dest_pos[X]) as usize..],
+                    &mut dest_img.pixels[(actual_dest.y * dest_img.bytes_per_line as i32 + actual_dest.x) as usize..],
                     dest_img.bytes_per_line,
                     src_pat_transl
                 );
                 return;
             } else if self.pix_fmt.bytes_per_pixel() == 2 && dest_img.pix_fmt == PixelFormat::RGB8 {
                 demosaic::demosaic_raw16_as_rgb8(
-                    width as usize,
-                    height as usize,
-                    &self.pixels::<u16>()[(src_pos[Y] * self.bytes_per_line as i32 / 2 + src_pos[X]) as usize..],
+                    actual_width as usize,
+                    actual_height as usize,
+                    &self.pixels::<u16>()[(actual_src.y * self.bytes_per_line as i32 / 2 + actual_src.x) as usize..],
                     self.bytes_per_line / 2,
-                    &mut dest_img.pixels[(dest_pos[Y] * dest_img.bytes_per_line as i32 + dest_pos[X]) as usize..],
+                    &mut dest_img.pixels[(actual_dest.y * dest_img.bytes_per_line as i32 + actual_dest.x) as usize..],
                     dest_img.bytes_per_line,
                     src_pat_transl
                 );
@@ -842,12 +844,12 @@ impl Image {
             let bpp = src_pix_fmt.bytes_per_pixel();
             let copy_line_len = actual_width * bpp;
 
-            let mut src_ofs = actual_src_pos[Y] as usize * self.bytes_per_line;
-            let mut dest_ofs = actual_dest_pos[Y] as usize * dest_img.bytes_per_line;
+            let mut src_ofs = actual_src.y as usize * self.bytes_per_line;
+            let mut dest_ofs = actual_dest.y as usize * dest_img.bytes_per_line;
 
             for _ in 0..actual_height {
-                let copy_to = dest_ofs + actual_dest_pos[X] as usize * bpp;
-                let copy_from = src_ofs + actual_src_pos[X] as usize * bpp;
+                let copy_to = dest_ofs + actual_dest.x as usize * bpp;
+                let copy_from = src_ofs + actual_src.x as usize * bpp;
 
                 dest_img.pixels[range!(copy_to, copy_line_len)]
                     .copy_from_slice(&self.pixels[range!(copy_from, copy_line_len)]);
@@ -863,10 +865,10 @@ impl Image {
         let dest_step = dest_img.pix_fmt.bytes_per_pixel();
 
         for y in 0..actual_height {
-            let mut src_ofs = (y + actual_src_pos[Y] as usize) * self.bytes_per_line +
-                actual_src_pos[X] as usize * src_pix_fmt.bytes_per_pixel();
-            let mut dest_ofs = (y + actual_dest_pos[Y] as usize) * dest_img.bytes_per_line +
-                actual_dest_pos[X] as usize * dest_img.pix_fmt.bytes_per_pixel();
+            let mut src_ofs = (y + actual_src.y as usize) * self.bytes_per_line +
+                actual_src.x as usize * src_pix_fmt.bytes_per_pixel();
+            let mut dest_ofs = (y + actual_dest.y as usize) * dest_img.bytes_per_line +
+                actual_dest.x as usize * dest_img.pix_fmt.bytes_per_pixel();
 
             /// Returns a slice of `dest_img`'s pixel values of type `T`, beginning at byte offset `dest_ofs`.
             macro_rules! dest { ($len:expr, $T:ty) => { unsafe { slice::from_raw_parts_mut(dest_img.pixels[dest_ofs..].as_mut_ptr() as *mut $T, $len) } }}

@@ -28,7 +28,6 @@ impl Rect {
         p[X] >= self.x && p[X] < self.x + self.width as i32 && p[Y] >= self.y && p[Y] < self.y + self.height as i32
     }
 
-
     pub fn contains_rect(&self, other: &Rect) -> bool {
         self.contains_point([other.x, other.y]) &&
         self.contains_point([other.x + other.width as i32 - 1,
@@ -47,5 +46,23 @@ impl Rect {
     pub fn set_size(&mut self, size: [u32; 2]) {
         self.width = size[0];
         self.height = size[1];
+    }
+
+    pub fn intersection(&self, other: &Rect) -> Option<Rect> {
+        let pos = if self.contains_point(other.pos()) {
+            other.pos()
+        } else if other.contains_point(self.pos()) {
+            self.pos()
+        } else {
+            return None;
+        };
+
+        let max_x = (self.x + self.width as i32).min(other.x + other.width as i32);
+        let max_y = (self.y + self.height as i32).min(other.y + other.height as i32);
+
+        let width = (max_x - pos[X]) as u32;
+        let height = (max_y - pos[Y]) as u32;
+
+        Some(Rect{ x: pos[X], y: pos[Y], width, height })
     }
 }
