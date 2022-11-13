@@ -54,6 +54,7 @@ pub enum PixelFormat {
     Mono8,
     /// LSB = R, MSB = B.
     RGB8,
+    RGBA8,
     /// LSB = B, MSB = R.
     BGR8,
     /// LSB = B, MSB = A or unused.
@@ -112,6 +113,7 @@ impl PixelFormat {
             PixelFormat::Pal8     |
             PixelFormat::Mono8    |
             PixelFormat::RGB8     |
+            PixelFormat::RGBA8    |
             PixelFormat::BGR8     |
             PixelFormat::BGRA8    |
             PixelFormat::CfaRGGB8 |
@@ -218,6 +220,7 @@ impl PixelFormat {
             PixelFormat::RGB32f |
             PixelFormat::RGB64f => 3,
 
+            PixelFormat::RGBA8 |
             PixelFormat::BGRA8 |
             PixelFormat::RGBA16 => 4
         }
@@ -239,6 +242,7 @@ impl PixelFormat {
 
             PixelFormat::RGB8 | PixelFormat::BGR8  => 3,
 
+            PixelFormat::RGBA8 |
             PixelFormat::BGRA8   => 4,
 
             PixelFormat::Mono16  => 2,
@@ -290,6 +294,7 @@ fn verify_pix_type<T: Default + Any>(pix_fmt: PixelFormat) {
         PixelFormat::Pal8     |
         PixelFormat::Mono8    |
         PixelFormat::RGB8     |
+        PixelFormat::RGBA8    |
         PixelFormat::BGR8     |
         PixelFormat::BGRA8    |
         PixelFormat::CfaRGGB8 |
@@ -672,6 +677,7 @@ impl Image {
 
             PixelFormat::Mono8    |
             PixelFormat::RGB8     |
+            PixelFormat::RGBA8    |
             PixelFormat::BGR8     |
             PixelFormat::BGRA8    |
             PixelFormat::CfaRGGB8 |
@@ -1110,6 +1116,54 @@ impl Image {
                     }
                 },
 
+                PixelFormat::RGBA8 => {
+                    /// Returns the current source pixel as `u8` RGB values.
+                    macro_rules! src { () => { unsafe { slice::from_raw_parts(self.pixels[src_ofs..].as_ptr() as *const u8, 4) } }}
+
+                    match dest_img.pix_fmt {
+                        PixelFormat::Mono8 => convert_whole_line!({ dest!(1, u8)[0] = ((src!()[0] as u16 + src!()[1] as u16 + src!()[2] as u16) / 3) as u8; }),
+
+                        PixelFormat::Mono16 => convert_whole_line!({ dest!(1, u16)[0] = (src!()[0] as u16 + src!()[1] as u16 + src!()[2] as u16) / 3 * 0xFF; }),
+
+                        PixelFormat::Mono32f => convert_whole_line!({ dest!(1, f32)[0] = (src!()[0] as u16 + src!()[1] as u16 + src!()[2] as u16) as f32 / (3.0 * 0xFF as f32); }),
+
+                        PixelFormat::RGB8 =>
+                            convert_whole_line!({
+                                let rgb = dest!(3, u8);
+                                for i in 0..3 { rgb[i] = src!()[i]; }
+                            }),
+
+                        PixelFormat::BGRA8 =>
+                            convert_whole_line!({
+                                let bgra = dest!(4, u8);
+                                for i in 0..4 { bgra[i] = src!()[3-i]; }
+                            }),
+
+                        PixelFormat::BGR8 =>
+                            convert_whole_line!({
+                                let bgr = dest!(3, u8);
+                                for i in 0..3 { bgr[i] = src!()[2-i]; }
+                            }),
+
+                        PixelFormat::RGBA16 =>
+                            convert_whole_line!({
+                                let rgba = dest!(4, u16);
+                                for i in 0..4 { rgba[i] = (src!()[i] as u16) << 8; }
+                            }),
+
+                        PixelFormat::RGB16 =>
+                            convert_whole_line!(
+                            { for i in 0..3 { dest!(3, u16)[i] = (src!()[i] as u16) << 8; } }),
+
+                        PixelFormat::RGB32f =>
+                            convert_whole_line!(
+                            { for i in 0..3 { dest!(3, f32)[i] = src!()[i] as f32 / 0xFF as f32; } }),
+
+
+                        _ => panic!()
+                    }
+                },
+
                 PixelFormat::BGR8 => {
                     /// Returns the current source pixel as `u8` BGR values.
                     macro_rules! src { () => { unsafe { slice::from_raw_parts(self.pixels[src_ofs..].as_ptr() as *const u8, 3) } }}
@@ -1149,6 +1203,41 @@ impl Image {
                             convert_whole_line!(
                             { for i in 0..3 { dest!(3, f32)[i] = src!()[i] as f32 / 0xFF as f32; } }),
 
+
+                        _ => panic!()
+                    }
+                },
+
+                PixelFormat::BGRA8 => {
+                    /// Returns the current source pixel as `u8` BGRA values.
+                    macro_rules! src { () => { unsafe { slice::from_raw_parts(self.pixels[src_ofs..].as_ptr() as *const u8, 4) } }}
+
+                    match dest_img.pix_fmt {
+                        PixelFormat::Mono8 => convert_whole_line!({ dest!(1, u8)[0] = ((src!()[0] as u16 + src!()[1] as u16 + src!()[2] as u16) / 3) as u8; }),
+
+                        PixelFormat::Mono16 => convert_whole_line!({ dest!(1, u16)[0] = (src!()[0] as u16 + src!()[1] as u16 + src!()[2] as u16) / 3 * 0xFF; }),
+
+                        PixelFormat::Mono32f => convert_whole_line!({ dest!(1, f32)[0] = (src!()[0] as u16 + src!()[1] as u16 + src!()[2] as u16) as f32 / (3.0 * 0xFF as f32); }),
+
+                        PixelFormat::RGB8 =>
+                            convert_whole_line!({
+                                let rgb = dest!(3, u8);
+                                for i in 0..3 { rgb[i] = src!()[2-i]; }
+                            }),
+
+                        PixelFormat::RGBA16 =>
+                            convert_whole_line!({
+                                let rgba = dest!(4, u16);
+                                for i in 0..4 { rgba[i] = (src!()[3-i] as u16) << 8; }
+                            }),
+
+                        PixelFormat::RGB16 =>
+                            convert_whole_line!(
+                            { for i in 0..3 { dest!(3, u16)[i] = (src!()[2-i] as u16) << 8; } }),
+
+                        PixelFormat::RGB32f =>
+                            convert_whole_line!(
+                            { for i in 0..3 { dest!(3, f32)[i] = src!()[2-i] as f32 / 0xFF as f32; } }),
 
                         _ => panic!()
                     }
