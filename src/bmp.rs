@@ -15,6 +15,7 @@ use std::io;
 use std::io::prelude::*;
 use std::io::{Seek, SeekFrom};
 use std::mem::{size_of};
+use std::path::Path;
 use super::{Image, ImageView, Palette, PixelFormat};
 use super::utils;
 
@@ -102,7 +103,8 @@ impl From<io::Error> for BmpError {
 
 
 /// Returns metadata (width, height, ...) without reading the pixel data.
-pub fn bmp_metadata(file_name: &str) -> Result<(u32, u32, PixelFormat, Option<Palette>), BmpError> {
+pub fn bmp_metadata<P: AsRef<Path>>(file_name: P)
+-> Result<(u32, u32, PixelFormat, Option<Palette>), BmpError> {
     let mut file = OpenOptions::new().read(true).write(false).open(file_name)?;
 
     let (img_width, img_height, _, pix_fmt, palette) = bmp_metadata_priv(&mut file)?;
@@ -173,9 +175,9 @@ fn bmp_metadata_priv(file: &mut File) -> Result<(u32, u32, usize, PixelFormat, O
     Ok((img_width, img_height, bits_per_pixel as usize, pix_fmt, pal))
 }
 
-pub fn load_bmp(file_name: &str) -> Result<Image, BmpError> {
+pub fn load_bmp<P: AsRef<Path>>(file_path: P) -> Result<Image, BmpError> {
 
-    let mut file = OpenOptions::new().read(true).write(false).open(file_name)?;
+    let mut file = OpenOptions::new().read(true).write(false).open(file_path)?;
 
     let (img_width, img_height, bits_per_pix, pix_fmt, palette) = bmp_metadata_priv(&mut file)?;
 
@@ -249,7 +251,7 @@ pub fn load_bmp(file_name: &str) -> Result<Image, BmpError> {
 }
 
 
-pub fn save_bmp(img: &ImageView, file_name: &str) -> Result<(), BmpError> {
+pub fn save_bmp<P: AsRef<Path>>(img: &ImageView, file_path: P) -> Result<(), BmpError> {
     let pix_fmt = match img.pixel_format() {
         PixelFormat::Mono8 |
         PixelFormat::Mono16 |
@@ -300,7 +302,7 @@ pub fn save_bmp(img: &ImageView, file_name: &str) -> Result<(), BmpError> {
         clr_important:    u32::to_le(0)
     };
 
-    let mut file = OpenOptions::new().read(false).write(true).create(true).open(file_name)?;
+    let mut file = OpenOptions::new().read(false).write(true).create(true).open(file_path)?;
 
     utils::write_struct(&bmfh, &mut file)?;
     utils::write_struct(&bmih, &mut file)?;

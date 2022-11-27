@@ -16,6 +16,7 @@ use std::io;
 use std::io::prelude::*;
 use std::io::{Seek, SeekFrom};
 use std::mem::{size_of, size_of_val};
+use std::path::Path;
 use super::utils;
 
 
@@ -205,8 +206,8 @@ fn validate_tiff_format(samples_per_pixel: usize, photometric_interpretation: u3
 }
 
 
-pub fn load_tiff(file_name: &str) -> Result<Image, TiffError> {
-    let mut file = OpenOptions::new().read(true).write(false).open(file_name)?;
+pub fn load_tiff<P: AsRef<Path>>(file_path: P) -> Result<Image, TiffError> {
+    let mut file = OpenOptions::new().read(true).write(false).open(file_path)?;
 
     let tiff_header: TiffHeader = utils::read_struct(&mut file)?;
 
@@ -323,7 +324,7 @@ pub fn load_tiff(file_name: &str) -> Result<Image, TiffError> {
 
 
 /// Returns metadata (width, height, ...) without reading the pixel data.
-pub fn tiff_metadata(file_name: &str) -> Result<(u32, u32, PixelFormat, Option<Palette>), TiffError> {
+pub fn tiff_metadata<P: AsRef<Path>>(file_name: P) -> Result<(u32, u32, PixelFormat, Option<Palette>), TiffError> {
     let mut file = OpenOptions::new().read(true).write(false).open(file_name)?;
 
     let tiff_header: TiffHeader = utils::read_struct(&mut file)?;
@@ -383,7 +384,7 @@ pub fn tiff_metadata(file_name: &str) -> Result<(u32, u32, PixelFormat, Option<P
     Ok((img_width.unwrap(), img_height.unwrap(), pix_fmt, None))
 }
 
-pub fn save_tiff(img: &ImageView, file_name: &str) -> Result<(), TiffError> {
+pub fn save_tiff<P: AsRef<Path>>(img: &ImageView, file_path: P) -> Result<(), TiffError> {
     let actual_pix_fmt = match img.pixel_format() {
         PixelFormat::Mono8 |
         PixelFormat::Mono16 |
@@ -395,7 +396,7 @@ pub fn save_tiff(img: &ImageView, file_name: &str) -> Result<(), TiffError> {
         _ => return Err(TiffError::UnsupportedPixelFormat)
     };
 
-    let mut file = OpenOptions::new().read(false).write(true).create(true).open(file_name)?;
+    let mut file = OpenOptions::new().read(false).write(true).create(true).open(file_path)?;
     let is_be = utils::is_machine_big_endian();
 
     // Note: a 16-bit value (TAG_TYPE_WORD) stored in the 32-bit `tiff_field.value` has to be

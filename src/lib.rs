@@ -36,14 +36,14 @@ pub enum FileType {
     Tiff
 }
 
-fn file_type_from_ext(file_name: &str) -> FileType {
-    match Path::new(file_name).extension() {
+fn file_type_from_ext(file_path: impl AsRef<std::path::Path>) -> FileType {
+    match file_path.as_ref().extension() {
         Some(ext) => match ext.to_str().unwrap().to_lowercase().as_str() {
                          "bmp" => FileType::Bmp,
                          "tif" | "tiff" => FileType::Tiff,
                          _ => panic!("Unrecognized file extension: {}", ext.to_str().unwrap())
                      },
-        _ => panic!("No file extension in file name: {}", file_name)
+        _ => panic!("No file extension in file name: {:?}", file_path.as_ref().file_name())
     }
 }
 
@@ -401,18 +401,19 @@ impl Image {
         self.pixels
     }
 
-    pub fn load(file_name: &str, file_type: FileType) -> Result<Image, ImageError> {
-        let ftype = if file_type == FileType::Auto { file_type_from_ext(file_name) } else { file_type };
+    pub fn load<P: AsRef<Path>>(file_path: P, file_type: FileType) -> Result<Image, ImageError> {
+        let ftype = if file_type == FileType::Auto { file_type_from_ext(&file_path) } else { file_type };
         match ftype {
-            FileType::Bmp => bmp::load_bmp(file_name).map_err(ImageError::BmpError),
-            FileType::Tiff => tiff::load_tiff(file_name).map_err(ImageError::TiffError),
+            FileType::Bmp => bmp::load_bmp(file_path).map_err(ImageError::BmpError),
+            FileType::Tiff => tiff::load_tiff(file_path).map_err(ImageError::TiffError),
             FileType::Auto => unreachable!()
         }
     }
 
     /// Returns width, height, pixel format, palette.
-    pub fn image_metadata(file_name: &str, file_type: FileType) -> Result<(u32, u32, PixelFormat, Option<Palette>), ImageError> {
-        let ftype = if file_type == FileType::Auto { file_type_from_ext(file_name) } else { file_type };
+    pub fn image_metadata<P: AsRef<Path>>(file_name: P, file_type: FileType)
+    -> Result<(u32, u32, PixelFormat, Option<Palette>), ImageError> {
+        let ftype = if file_type == FileType::Auto { file_type_from_ext(&file_name) } else { file_type };
         match ftype {
             FileType::Bmp => bmp::bmp_metadata(file_name).map_err(ImageError::BmpError),
             FileType::Tiff => tiff::tiff_metadata(file_name).map_err(ImageError::TiffError),
@@ -1647,11 +1648,11 @@ impl ImageView<'_> {
     }
 
     /// Overwrites existing file.
-    pub fn save(&self, file_name: &str, file_type: FileType) -> Result<(), ImageError> {
-        let ftype = if file_type == FileType::Auto { file_type_from_ext(file_name) } else { file_type };
+    pub fn save<P: AsRef<Path>>(&self, file_path: P, file_type: FileType) -> Result<(), ImageError> {
+        let ftype = if file_type == FileType::Auto { file_type_from_ext(&file_path) } else { file_type };
         match ftype {
-            FileType::Bmp => bmp::save_bmp(&self, file_name).map_err(ImageError::BmpError),
-            FileType::Tiff => tiff::save_tiff(&self, file_name).map_err(ImageError::TiffError),
+            FileType::Bmp => bmp::save_bmp(&self, file_path).map_err(ImageError::BmpError),
+            FileType::Tiff => tiff::save_tiff(&self, file_path).map_err(ImageError::TiffError),
             FileType::Auto => unreachable!()
         }
     }
