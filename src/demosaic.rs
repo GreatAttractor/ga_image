@@ -27,6 +27,7 @@ fn get_two_lines_mut<T>(
     line_len: usize,
     stride: usize
 ) -> (&mut [T], &mut [T]) {
+    assert!(y1 != y2);
     let ofs1 = y1 * stride;
     assert!(ofs1 + line_len <= pixels.len());
 

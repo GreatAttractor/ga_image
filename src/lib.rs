@@ -601,7 +601,7 @@ impl Image {
     /// `T` must correspond to the image's pixel format.
     ///
     pub fn two_lines_mut<T: Any + Default>(&mut self, y1: u32, y2: u32) -> (&mut [T], &mut [T]) {
-        assert!(y1 < self.height && y2 < self.height);
+        assert!(y1 != y2 && y1 < self.height && y2 < self.height);
 
         let bpl = self.bytes_per_line;
         let width = self.width;
