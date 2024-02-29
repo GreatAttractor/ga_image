@@ -70,6 +70,7 @@ const TAG_SAMPLES_PER_PIXEL           : u16 = 0x115;
 const TAG_ROWS_PER_STRIP              : u16 = 0x116;
 const TAG_STRIP_BYTE_COUNTS           : u16 = 0x117;
 const TAG_PLANAR_CONFIGURATION        : u16 = 0x11C;
+const TAG_EXTRA_SAMPLES               : u16 = 0x152;
 
 const NO_COMPRESSION: u32 = 1;
 const PLANAR_CONFIGURATION_CHUNKY: u32 = 1;
@@ -79,6 +80,10 @@ const MOTOROLA_BYTE_ORDER: u16 = (('M' as u16) << 8) + 'M' as u16;
 const PHMET_WHITE_IS_ZERO: u32 = 0;
 const PHMET_BLACK_IS_ZERO: u32 = 1;
 const PHMET_RGB: u32 = 2;
+
+const EXTRASAMPLE_UNSPECIFIED: u32 = 0;
+const EXTRASAMPLE_ASSOCIATED_ALPHA: u32 = 1;
+const EXTRASAMPLE_UNASSOCIATED_ALPHA: u32 = 2;
 
 
 /// Reverses 8-bit grayscale values.
@@ -389,12 +394,16 @@ pub fn save_tiff<P: AsRef<Path>>(img: &ImageView, file_path: P) -> Result<(), Ti
         PixelFormat::Mono8 |
         PixelFormat::Mono16 |
         PixelFormat::RGB8 |
-        PixelFormat::RGB16 => img.pixel_format(),
+        PixelFormat::RGBA8 |
+        PixelFormat::RGB16 |
+        PixelFormat::RGBA16 => img.pixel_format(),
 
         pix_fmt if pix_fmt.is_cfa() => pix_fmt.cfa_as_mono(),
 
         _ => return Err(TiffError::UnsupportedPixelFormat)
     };
+
+    let has_alpha = match actual_pix_fmt { PixelFormat::RGBA8 | PixelFormat::RGBA16 => true, _ => false };
 
     let mut file = OpenOptions::new().read(false).write(true).create(true).open(file_path)?;
     let is_be = utils::is_machine_big_endian();
@@ -451,8 +460,11 @@ pub fn save_tiff<P: AsRef<Path>>(img: &ImageView, file_path: P) -> Result<(), Ti
                         value: match actual_pix_fmt
                                {
                                    PixelFormat::Mono8 | PixelFormat::Mono16 => PHMET_BLACK_IS_ZERO,
-                                   PixelFormat::RGB8 | PixelFormat::RGB16 => PHMET_RGB,
-                                   _ => panic!()
+                                   PixelFormat::RGB8 |
+                                   PixelFormat::RGBA8 |
+                                   PixelFormat::RGB16 |
+                                   PixelFormat::RGBA16 => PHMET_RGB,
+                                   _ => panic!("unexpected pixel format")
                                }
                       };
     if is_be { field.value <<= 16; }
@@ -476,6 +488,17 @@ pub fn save_tiff<P: AsRef<Path>>(img: &ImageView, file_path: P) -> Result<(), Ti
                         value: actual_pix_fmt.num_channels() as u32 };
     if is_be { field.value <<= 16; }
     utils::write_struct(&field, &mut file)?;
+
+    if has_alpha {
+        field  = TiffField{
+            tag: TAG_EXTRA_SAMPLES,
+            ftype: TAG_TYPE_WORD,
+            count: 1,
+            value: EXTRASAMPLE_UNASSOCIATED_ALPHA
+        };
+        if is_be { field.value <<= 16; }
+        utils::write_struct(&field, &mut file)?;
+    }
 
     field = TiffField { tag: TAG_ROWS_PER_STRIP,
                         ftype: TAG_TYPE_WORD,
