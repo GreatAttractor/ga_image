@@ -421,7 +421,7 @@ pub fn save_tiff<P: AsRef<Path>>(img: &ImageView, file_path: P) -> Result<(), Ti
 
     utils::write_struct(&tiff_header, &mut file)?;
 
-    let num_dir_entries: u16 = 10;
+    let num_dir_entries: u16 = if has_alpha { 11 } else { 10 };
     utils::write_struct(&num_dir_entries, &mut file)?;
 
     let next_dir_offset = 0u32;
@@ -473,10 +473,10 @@ pub fn save_tiff<P: AsRef<Path>>(img: &ImageView, file_path: P) -> Result<(), Ti
     field = TiffField { tag: TAG_STRIP_OFFSETS,
                         ftype: TAG_TYPE_WORD,
                         count: 1,
-                        // We write the header, num. of directory entries, 10 fields and a next directory offset (==0); pixel data starts next
+                        // We write the header, num. of directory entries, 11 fields and a next directory offset (==0); pixel data starts next
                         value: (size_of_val(&tiff_header) +
                                size_of_val(&num_dir_entries) +
-                               10 * size_of_val(&field) +
+                               num_dir_entries as usize * size_of_val(&field) +
                                size_of_val(&next_dir_offset)) as u32
                       };
     if is_be { field.value <<= 16; }
@@ -488,17 +488,6 @@ pub fn save_tiff<P: AsRef<Path>>(img: &ImageView, file_path: P) -> Result<(), Ti
                         value: actual_pix_fmt.num_channels() as u32 };
     if is_be { field.value <<= 16; }
     utils::write_struct(&field, &mut file)?;
-
-    if has_alpha {
-        field  = TiffField{
-            tag: TAG_EXTRA_SAMPLES,
-            ftype: TAG_TYPE_WORD,
-            count: 1,
-            value: EXTRASAMPLE_UNASSOCIATED_ALPHA
-        };
-        if is_be { field.value <<= 16; }
-        utils::write_struct(&field, &mut file)?;
-    }
 
     field = TiffField { tag: TAG_ROWS_PER_STRIP,
                         ftype: TAG_TYPE_WORD,
@@ -519,6 +508,17 @@ pub fn save_tiff<P: AsRef<Path>>(img: &ImageView, file_path: P) -> Result<(), Ti
                         value: PLANAR_CONFIGURATION_CHUNKY };
     if is_be { field.value <<= 16; }
     utils::write_struct(&field, &mut file)?;
+
+    if has_alpha {
+        field  = TiffField{
+            tag: TAG_EXTRA_SAMPLES,
+            ftype: TAG_TYPE_WORD,
+            count: 1,
+            value: EXTRASAMPLE_UNASSOCIATED_ALPHA
+        };
+        if is_be { field.value <<= 16; }
+        utils::write_struct(&field, &mut file)?;
+    }
 
     // Write the next directory offset (0 = no other directories)
     utils::write_struct(&next_dir_offset, &mut file)?;
