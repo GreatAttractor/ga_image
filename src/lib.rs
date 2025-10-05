@@ -923,7 +923,7 @@ impl Image {
                         PixelFormat::RGB16 =>
                             convert_whole_line!({ for i in dest!(3, u16) { *i = (self.pixels[src_ofs] as u16) << 8; } }),
 
-                        _ => panic!()
+                        _ => panic!("Unsupported conversion case: {:?} -> {:?}.", src_pix_fmt, dest_img.pix_fmt)
                     }
                 },
 
@@ -956,7 +956,7 @@ impl Image {
 
                         PixelFormat::RGB64f => convert_whole_line!({ for i in dest!(3, f64) { *i = src!() as f64 / 0xFFFF as f64; } }),
 
-                        _ => panic!()
+                        _ => panic!("Unsupported conversion case: {:?} -> {:?}.", src_pix_fmt, dest_img.pix_fmt)
                     }
                 },
 
@@ -987,7 +987,7 @@ impl Image {
 
                         PixelFormat::RGB64f => convert_whole_line!({ for i in dest!(3, f64) { *i = src!() as f64; } }),
 
-                        _ => panic!()
+                        _ => panic!("Unsupported conversion case: {:?} -> {:?}.", src_pix_fmt, dest_img.pix_fmt)
                     }
                 },
 
@@ -1019,7 +1019,7 @@ impl Image {
 
                         PixelFormat::RGB64f => convert_whole_line!({ for i in dest!(3, f64) { *i = src!(); } }),
 
-                        _ => panic!()
+                        _ => panic!("Unsupported conversion case: {:?} -> {:?}.", src_pix_fmt, dest_img.pix_fmt)
                     }
                 },
 
@@ -1069,7 +1069,7 @@ impl Image {
                             convert_whole_line!(
                             { for i in 0..3 { dest!(3, f64)[i] = (src!(i) as f64) / 0xFF as f64; } }),
 
-                        _ => panic!()
+                        _ => panic!("Unsupported conversion case: {:?} -> {:?}.", src_pix_fmt, dest_img.pix_fmt)
                     }
                 },
 
@@ -1100,7 +1100,7 @@ impl Image {
                         PixelFormat::RGBA16 =>
                             convert_whole_line!({
                                 let rgba = dest!(4, u16);
-                                rgba[3] = 0xFF;
+                                rgba[3] = 0xFFFF;
                                 for i in 0..3 { rgba[i] = (src!()[i] as u16) << 8; }
                             }),
 
@@ -1113,7 +1113,14 @@ impl Image {
                             { for i in 0..3 { dest!(3, f32)[i] = src!()[i] as f32 / 0xFF as f32; } }),
 
 
-                        _ => panic!()
+                        PixelFormat::RGBA8 =>
+                            convert_whole_line!({
+                                let rgba = dest!(4, u8);
+                                rgba[3] = 0xFF;
+                                for i in 0..3 { rgba[i] = src!()[i]; }
+                            }),
+
+                        _ => panic!("Unsupported conversion case: {:?} -> {:?}.", src_pix_fmt, dest_img.pix_fmt)
                     }
                 },
 
@@ -1161,7 +1168,7 @@ impl Image {
                             { for i in 0..3 { dest!(3, f32)[i] = src!()[i] as f32 / 0xFF as f32; } }),
 
 
-                        _ => panic!()
+                        _ => panic!("Unsupported conversion case: {:?} -> {:?}.", src_pix_fmt, dest_img.pix_fmt)
                     }
                 },
 
@@ -1205,7 +1212,7 @@ impl Image {
                             { for i in 0..3 { dest!(3, f32)[i] = src!()[i] as f32 / 0xFF as f32; } }),
 
 
-                        _ => panic!()
+                        _ => panic!("Unsupported conversion case: {:?} -> {:?}.", src_pix_fmt, dest_img.pix_fmt)
                     }
                 },
 
@@ -1240,7 +1247,7 @@ impl Image {
                             convert_whole_line!(
                             { for i in 0..3 { dest!(3, f32)[i] = src!()[2-i] as f32 / 0xFF as f32; } }),
 
-                        _ => panic!()
+                        _ => panic!("Unsupported conversion case: {:?} -> {:?}.", src_pix_fmt, dest_img.pix_fmt)
                     }
                 },
 
@@ -1277,7 +1284,7 @@ impl Image {
                             { for i in 0..3 { dest!(3, f32)[i] = src!()[i] as f32 / 0xFFFF as f32; } }),
 
 
-                        _ => panic!()
+                        _ => panic!("Unsupported conversion case: {:?} -> {:?}.", src_pix_fmt, dest_img.pix_fmt)
                     }
                 },
 
@@ -1318,7 +1325,7 @@ impl Image {
                             convert_whole_line!(
                             { for i in 0..3 { dest!(3, f64)[i] = src!()[i] as f64; } }),
 
-                        _ => panic!()
+                        _ => panic!("Unsupported conversion case: {:?} -> {:?}.", src_pix_fmt, dest_img.pix_fmt)
                     }
                 },
 
@@ -1359,11 +1366,11 @@ impl Image {
                             convert_whole_line!(
                             { for i in 0..3 { dest!(3, f32)[i] = src!()[i] as f32; } }),
 
-                        _ => panic!()
+                        _ => panic!("Unsupported conversion case: {:?} -> {:?}.", src_pix_fmt, dest_img.pix_fmt)
                     }
                 },
 
-                _ => panic!("Conversion from {:?} to {:?} not implemented yet.", self.pix_fmt, dest_img.pix_fmt)
+                _ => panic!("Unsupported conversion case: {:?} -> {:?}.", src_pix_fmt, dest_img.pix_fmt)
             }
         }
     }
