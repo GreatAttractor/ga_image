@@ -1582,7 +1582,7 @@ impl Image {
         (self.width * self.height) as usize * self.pix_fmt.bytes_per_pixel()
     }
 
-    pub fn view(&self) -> ImageView {
+    pub fn view(&self) -> ImageView<'_> {
         ImageView{ image: &self, fragment: self.img_rect() }
     }
 }
@@ -1615,7 +1615,7 @@ pub struct ImageView<'a> {
 }
 
 impl ImageView<'_> {
-    pub fn new(image: &Image, fragment: Option<Rect>) -> ImageView {
+    pub fn new(image: &Image, fragment: Option<Rect>) -> ImageView<'_> {
         let fragment = {
             if let Some(rect) = fragment {
                 assert!(image.img_rect().contains_rect(&rect));
