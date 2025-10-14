@@ -910,11 +910,11 @@ impl Image {
                         PixelFormat::RGB64f =>
                             convert_whole_line!({ for i in dest!(3, f64) { *i = self.pixels[src_ofs] as f64 * 1.0 / 0xFF as f64; } }),
 
-                        PixelFormat::BGRA8 =>
+                        PixelFormat::RGBA8 | PixelFormat::BGRA8 =>
                             convert_whole_line!({
-                                let bgra = dest!(4, u8);
-                                bgra[3] = 0xFF;
-                                for i in 0..3 { bgra[i] = self.pixels[src_ofs]; }
+                                let dest = dest!(4, u8);
+                                dest[3] = 0xFF;
+                                for i in 0..3 { dest[i] = self.pixels[src_ofs]; }
                             }),
 
                         PixelFormat::RGB8 | PixelFormat::BGR8 =>
