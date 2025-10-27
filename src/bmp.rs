@@ -93,7 +93,8 @@ pub fn is_mono8_palette(palette: &Palette) -> bool {
 pub enum BmpError {
     Io(io::Error),
     MalformedFile,
-    UnsupportedFormat
+    UnsupportedFormat(u32),
+    UnsupportedOutputFormat
 }
 
 
@@ -127,13 +128,15 @@ fn bmp_metadata_priv(file: &mut File) -> Result<(u32, u32, usize, PixelFormat, O
     let img_width = i32::from_le(info_hdr.width) as u32;
     let img_height = i32::from_le(info_hdr.height) as u32;
 
+    let compression = u32::from_le(info_hdr.compression);
+
     if img_width == 0 || img_height == 0 ||
        file_hdr.ftype[0] != 'B' as u8 || file_hdr.ftype[1] != 'M' as u8 ||
        u16::from_le(info_hdr.planes) != 1 ||
        bits_per_pixel != 8 && bits_per_pixel != 24 && bits_per_pixel != 32 ||
-       u32::from_le(info_hdr.compression) != BI_RGB && u32::from_le(info_hdr.compression) != BI_BITFIELDS {
+       compression != BI_RGB && compression != BI_BITFIELDS {
 
-        return Err(BmpError::UnsupportedFormat);
+        return Err(BmpError::UnsupportedFormat(compression));
     }
 
     let mut pix_fmt;
@@ -260,11 +263,11 @@ pub fn save_bmp<P: AsRef<Path>>(img: &ImageView, file_path: P) -> Result<(), Bmp
 
         pix_fmt if pix_fmt.is_cfa() => pix_fmt.cfa_as_mono(),
 
-        _ => return Err(BmpError::UnsupportedFormat)
+        _ => return Err(BmpError::UnsupportedOutputFormat)
     };
 
     if ![PixelFormat::Pal8, PixelFormat::RGB8, PixelFormat::Mono8].contains(&pix_fmt) {
-        return Err(BmpError::UnsupportedFormat);
+        return Err(BmpError::UnsupportedOutputFormat);
     }
 
     let width = img.width();
