@@ -1585,6 +1585,36 @@ impl Image {
     pub fn view(&self) -> ImageView<'_> {
         ImageView{ image: &self, fragment: self.img_rect() }
     }
+
+    /// Returns the image scaled to new size using linear interpolation.
+    pub fn scale(&self, new_width: u32, new_height: u32) -> Image {
+        assert!(new_width > 0 && new_height > 0);
+        assert!(self.pix_fmt != PixelFormat::Pal8 && !self.pix_fmt.is_cfa());
+
+        let mut new_img = Image::new(new_width, new_height, None, self.pix_fmt, None, false);
+
+        match self.pix_fmt {
+            PixelFormat::Mono8 |
+            PixelFormat::RGB8 |
+            PixelFormat::RGBA8 |
+            PixelFormat::BGR8 |
+            PixelFormat::BGRA8 => scale_image::<u8>(&self, &mut new_img),
+
+            PixelFormat::Mono16 |
+            PixelFormat::RGB16 |
+            PixelFormat::RGBA16 => scale_image::<u16>(&self, &mut new_img),
+
+            PixelFormat::Mono32f |
+            PixelFormat::RGB32f => scale_image::<f32>(&self, &mut new_img),
+
+            PixelFormat::Mono64f |
+            PixelFormat::RGB64f => scale_image_f64::<f64>(&self, &mut new_img),
+
+            _ => panic!("Scaling not supported for pixel format {:?}.", self.pix_fmt)
+        }
+
+        new_img
+    }
 }
 
 fn change_endianess<T>(words: &mut [T]) {
@@ -1718,5 +1748,126 @@ fn translate_cfa_pattern(pattern: CFAPattern, dx: i32, dy: i32) -> CFAPattern {
         (CFAPattern::RGGB, 1, 1) => CFAPattern::BGGR,
 
         _ => panic!("Invalid arguments: {:?}, {}, {}", pattern, dx, dy)
+    }
+}
+
+trait FromF64 {
+    fn from_f64(f: f64) -> Self;
+}
+
+impl FromF64 for u8 {
+    fn from_f64(f: f64) -> Self { f as u8 }
+}
+
+impl FromF64 for u16 {
+    fn from_f64(f: f64) -> Self { f as u16 }
+}
+
+impl FromF64 for f32 {
+    fn from_f64(f: f64) -> Self { f as f32 }
+}
+
+impl FromF64 for f64 {
+    fn from_f64(f: f64) -> Self { f }
+}
+
+trait FromF32 {
+    fn from_f32(f: f32) -> Self;
+}
+
+impl FromF32 for u8 {
+    fn from_f32(f: f32) -> Self { f as u8 }
+}
+
+impl FromF32 for u16 {
+    fn from_f32(f: f32) -> Self { f as u16 }
+}
+
+impl FromF32 for f32 {
+    fn from_f32(f: f32) -> Self { f }
+}
+
+impl FromF32 for f64 {
+    fn from_f32(f: f32) -> Self { f as f64 }
+}
+
+fn scale_image<T: Any + Clone + Default + Into<f32> + FromF32>(src: &Image, dest: &mut Image) {
+    assert!(src.pix_fmt != PixelFormat::Pal8);
+    assert!(src.pix_fmt == dest.pix_fmt);
+
+    let num_channels = src.pix_fmt.num_channels();
+
+    let dest_width = dest.width;
+    let dest_height = dest.height;
+
+    for y in 0..dest_height {
+        let src_y = y as f32 * src.height as f32 / dest_height as f32;
+        let src_y_lo = src_y.floor() as u32;
+        let src_row_lo = src.line::<T>(src_y_lo);
+        let src_row_hi = src.line::<T>((src_y_lo + 1).min(src.height - 1));
+        let ty = src_y.fract();
+
+        let dest_row = dest.line_mut::<T>(y);
+
+        for x in 0..dest_width {
+            let src_x = x as f32 * src.width as f32 / dest_width as f32;
+            let src_x_lo = src_x.floor() as usize;
+            let src_x_hi = (src_x_lo + 1).min(src.width as usize - 1);
+            let tx = src_x.fract();
+
+            for ch in 0..num_channels {
+                let v_00 = Into::<f32>::into(src_row_lo[src_x_lo + ch].clone());
+                let v_10 = Into::<f32>::into(src_row_lo[src_x_hi + ch].clone());
+                let v_11 = Into::<f32>::into(src_row_hi[src_x_hi + ch].clone());
+                let v_01 = Into::<f32>::into(src_row_hi[src_x_lo + ch].clone());
+
+                dest_row[x as usize + ch] = FromF32::from_f32(
+                    v_00 * (1.0 - tx) * (1.0 - ty) +
+                    v_10 * tx * (1.0 - ty) +
+                    v_11 * tx * ty +
+                    v_01 * (1.0 - tx) * ty);
+            }
+        }
+    }
+}
+
+
+fn scale_image_f64<T: Any + Clone + Default + Into<f64> + FromF64>(src: &Image, dest: &mut Image) {
+    assert!(src.pix_fmt != PixelFormat::Pal8);
+    assert!(src.pix_fmt == dest.pix_fmt);
+
+    let num_channels = src.pix_fmt.num_channels();
+
+    let dest_width = dest.width;
+    let dest_height = dest.height;
+
+    for y in 0..dest_height {
+        let src_y = y as f64 * src.height as f64 / dest_height as f64;
+        let src_y_lo = src_y.floor() as u32;
+        let src_row_lo = src.line::<T>(src_y_lo);
+        let src_row_hi = src.line::<T>((src_y_lo + 1).min(src.height - 1));
+        let ty = src_y.fract();
+
+        let dest_row = dest.line_mut::<T>(y);
+
+        for x in 0..dest_width {
+            let src_x = x as f64 * src.width as f64 / dest_width as f64;
+            let src_x_lo = src_x.floor() as usize;
+            let src_x_hi = (src_x_lo + 1).min(src.width as usize - 1);
+            let tx = src_x.fract();
+
+            for ch in 0..num_channels {
+                let v_00 = Into::<f64>::into(src_row_lo[src_x_lo + ch].clone());
+                let v_10 = Into::<f64>::into(src_row_lo[src_x_hi + ch].clone());
+                let v_11 = Into::<f64>::into(src_row_hi[src_x_hi + ch].clone());
+                let v_01 = Into::<f64>::into(src_row_hi[src_x_lo + ch].clone());
+
+                dest_row[x as usize + ch] = FromF64::from_f64(
+                    v_00 * (1.0 - tx) * (1.0 - ty) +
+                    v_10 * tx * (1.0 - ty) +
+                    v_11 * tx * ty +
+                    v_01 * (1.0 - tx) * ty);
+            }
+        }
     }
 }
