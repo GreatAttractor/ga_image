@@ -939,11 +939,11 @@ impl Image {
                         PixelFormat::RGB32f =>
                             convert_whole_line!({ for i in dest!(3, f32) { *i = src!() as f32 / 0xFFFF as f32; } }),
 
-                        PixelFormat::BGRA8 =>
+                        PixelFormat::RGBA8 | PixelFormat::BGRA8 =>
                             convert_whole_line!({
-                                let bgra = dest!(4, u8);
-                                bgra[3] = 0xFF;
-                                for i in 0..3 { bgra[i] = (src!() >> 8) as u8; }
+                                let dest = dest!(4, u8);
+                                dest[3] = 0xFF;
+                                for i in 0..3 { dest[i] = (src!() >> 8) as u8; }
                             }),
 
                         PixelFormat::RGB8 | PixelFormat::BGR8 =>
