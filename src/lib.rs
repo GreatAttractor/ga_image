@@ -1816,12 +1816,12 @@ fn scale_image<T: Any + Clone + Default + Into<f32> + FromF32>(src: &Image, dest
             let tx = src_x.fract();
 
             for ch in 0..num_channels {
-                let v_00 = Into::<f32>::into(src_row_lo[src_x_lo + ch].clone());
-                let v_10 = Into::<f32>::into(src_row_lo[src_x_hi + ch].clone());
-                let v_11 = Into::<f32>::into(src_row_hi[src_x_hi + ch].clone());
-                let v_01 = Into::<f32>::into(src_row_hi[src_x_lo + ch].clone());
+                let v_00 = Into::<f32>::into(src_row_lo[num_channels * src_x_lo + ch].clone());
+                let v_10 = Into::<f32>::into(src_row_lo[num_channels * src_x_hi + ch].clone());
+                let v_11 = Into::<f32>::into(src_row_hi[num_channels * src_x_hi + ch].clone());
+                let v_01 = Into::<f32>::into(src_row_hi[num_channels * src_x_lo + ch].clone());
 
-                dest_row[x as usize + ch] = FromF32::from_f32(
+                dest_row[num_channels * x as usize + ch] = FromF32::from_f32(
                     v_00 * (1.0 - tx) * (1.0 - ty) +
                     v_10 * tx * (1.0 - ty) +
                     v_11 * tx * ty +
