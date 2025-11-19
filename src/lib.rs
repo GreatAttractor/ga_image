@@ -19,7 +19,6 @@ mod rect;
 mod tiff;
 
 use std::any::Any;
-use std::cmp::{min, max};
 use std::convert::From;
 use std::default::Default;
 use std::path::Path;
