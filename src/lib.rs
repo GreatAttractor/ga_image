@@ -65,6 +65,7 @@ pub enum PixelFormat {
 
     Mono32f,
     RGB32f,
+    RGBA32f,
 
     Mono64f,
     RGB64f,
@@ -128,7 +129,7 @@ impl PixelFormat {
             PixelFormat::CfaGBRG16 |
             PixelFormat::CfaBGGR16 => 2,
 
-            PixelFormat::Mono32f | PixelFormat::RGB32f => 4,
+            PixelFormat::Mono32f | PixelFormat::RGB32f | PixelFormat::RGBA32f => 4,
 
             PixelFormat::Mono64f | PixelFormat::RGB64f => 8,
         }
@@ -221,7 +222,8 @@ impl PixelFormat {
 
             PixelFormat::RGBA8 |
             PixelFormat::BGRA8 |
-            PixelFormat::RGBA16 => 4
+            PixelFormat::RGBA16 |
+            PixelFormat::RGBA32f => 4
         }
     }
 
@@ -250,6 +252,7 @@ impl PixelFormat {
 
             PixelFormat::Mono32f => 4,
             PixelFormat::RGB32f  => 12,
+            PixelFormat::RGBA32f => 16,
             PixelFormat::Mono64f => 8,
             PixelFormat::RGB64f  => 24,
         }
@@ -309,7 +312,7 @@ fn verify_pix_type<T: Default + Any>(pix_fmt: PixelFormat) {
         PixelFormat::CfaGBRG16 |
         PixelFormat::CfaBGGR16 => assert!(t.is::<u16>()),
 
-        PixelFormat::Mono32f | PixelFormat::RGB32f => assert!(t.is::<f32>()),
+        PixelFormat::Mono32f | PixelFormat::RGB32f | PixelFormat::RGBA32f => assert!(t.is::<f32>()),
 
         PixelFormat::Mono64f | PixelFormat::RGB64f => assert!(t.is::<f64>()),
     }}
@@ -703,7 +706,7 @@ impl Image {
                 m01 = moments.2;
             },
 
-            PixelFormat::Mono32f | PixelFormat::RGB32f => {
+            PixelFormat::Mono32f | PixelFormat::RGB32f | PixelFormat::RGBA32f => {
                 let moments = self.moments::<f32>(img_fragment);
                 m00 = moments.0;
                 m10 = moments.1;
@@ -906,6 +909,13 @@ impl Image {
                         PixelFormat::RGB32f =>
                             convert_whole_line!({ for i in dest!(3, f32) { *i = self.pixels[src_ofs] as f32 / 0xFF as f32; } }),
 
+                        PixelFormat::RGBA32f =>
+                            convert_whole_line!({
+                                let dest = dest!(4, f32);
+                                dest[3] = 1.0;
+                                for i in 0..3 { dest[i] = self.pixels[src_ofs] as f32 / 0xFF as f32; }
+                            }),
+
                         PixelFormat::RGB64f =>
                             convert_whole_line!({ for i in dest!(3, f64) { *i = self.pixels[src_ofs] as f64 * 1.0 / 0xFF as f64; } }),
 
@@ -937,6 +947,13 @@ impl Image {
 
                         PixelFormat::RGB32f =>
                             convert_whole_line!({ for i in dest!(3, f32) { *i = src!() as f32 / 0xFFFF as f32; } }),
+
+                        PixelFormat::RGBA32f =>
+                            convert_whole_line!({
+                                let dest = dest!(4, f32);
+                                for d in &mut dest[0..3] { *d = self.pixels[src_ofs] as f32 / 0xFF as f32; }
+                                dest[3] = 1.0;
+                            }),
 
                         PixelFormat::RGBA8 | PixelFormat::BGRA8 =>
                             convert_whole_line!({
@@ -982,6 +999,13 @@ impl Image {
 
                         PixelFormat::RGB32f => convert_whole_line!({ for i in dest!(3, f32) { *i = src!(); } }),
 
+                        PixelFormat::RGBA32f =>
+                            convert_whole_line!({
+                                let dest = dest!(4, f32);
+                                for d in &mut dest[0..3] { *d = src!(); }
+                                dest[3] = 1.0;
+                            }),
+
                         PixelFormat::Mono64f => convert_whole_line!({ dest!(1, f64)[0] = src!() as f64; }),
 
                         PixelFormat::RGB64f => convert_whole_line!({ for i in dest!(3, f64) { *i = src!() as f64; } }),
@@ -1013,6 +1037,13 @@ impl Image {
                         PixelFormat::RGB16 => convert_whole_line!({ for i in dest!(3, u16) { *i = (src!() * 0xFFFF as f64) as u16; } }),
 
                         PixelFormat::RGB32f => convert_whole_line!({ for i in dest!(3, f32) { *i = src!() as f32; } }),
+
+                        PixelFormat::RGBA32f =>
+                            convert_whole_line!({
+                                let dest = dest!(4, f32);
+                                for d in &mut dest[0..3] { *d = src!() as f32; }
+                                dest[3] = 1.0;
+                            }),
 
                         PixelFormat::Mono32f => convert_whole_line!({ dest!(1, f32)[0] = src!() as f32; }),
 
@@ -1111,6 +1142,12 @@ impl Image {
                             convert_whole_line!(
                             { for i in 0..3 { dest!(3, f32)[i] = src!()[i] as f32 / 0xFF as f32; } }),
 
+                        PixelFormat::RGBA32f =>
+                            convert_whole_line!({
+                                let dest = dest!(4, f32);
+                                for d in &mut dest[0..3] { *d = self.pixels[src_ofs] as f32 / 0xFF as f32; }
+                                dest[3] = 1.0;
+                            }),
 
                         PixelFormat::RGBA8 =>
                             convert_whole_line!({
@@ -1166,6 +1203,10 @@ impl Image {
                             convert_whole_line!(
                             { for i in 0..3 { dest!(3, f32)[i] = src!()[i] as f32 / 0xFF as f32; } }),
 
+                        PixelFormat::RGBA32f =>
+                            convert_whole_line!(
+                            { for i in 0..4 { dest!(4, f32)[i] = src!()[i] as f32 / 0xFF as f32; } }),
+
 
                         _ => panic!("Unsupported conversion case: {:?} -> {:?}.", src_pix_fmt, dest_img.pix_fmt)
                     }
@@ -1210,6 +1251,14 @@ impl Image {
                             convert_whole_line!(
                             { for i in 0..3 { dest!(3, f32)[i] = src!()[i] as f32 / 0xFF as f32; } }),
 
+                        PixelFormat::RGBA32f =>
+                            convert_whole_line!({
+                                let d = dest!(4, f32);
+                                d[0] = src!()[2] as f32 / 0xff as f32;
+                                d[1] = src!()[1] as f32 / 0xff as f32;
+                                d[2] = src!()[0] as f32 / 0xff as f32;
+                                d[3] = 1.0;
+                            }),
 
                         _ => panic!("Unsupported conversion case: {:?} -> {:?}.", src_pix_fmt, dest_img.pix_fmt)
                     }
@@ -1245,6 +1294,15 @@ impl Image {
                         PixelFormat::RGB32f =>
                             convert_whole_line!(
                             { for i in 0..3 { dest!(3, f32)[i] = src!()[2-i] as f32 / 0xFF as f32; } }),
+
+                        PixelFormat::RGBA32f =>
+                            convert_whole_line!({
+                                let d = dest!(4, f32);
+                                d[0] = src!()[2] as f32 / 0xff as f32;
+                                d[1] = src!()[1] as f32 / 0xff as f32;
+                                d[2] = src!()[0] as f32 / 0xff as f32;
+                                d[3] = 1.0;
+                            }),
 
                         _ => panic!("Unsupported conversion case: {:?} -> {:?}.", src_pix_fmt, dest_img.pix_fmt)
                     }
@@ -1282,6 +1340,11 @@ impl Image {
                             convert_whole_line!(
                             { for i in 0..3 { dest!(3, f32)[i] = src!()[i] as f32 / 0xFFFF as f32; } }),
 
+                        PixelFormat::RGBA32f => convert_whole_line!({
+                            let dest = dest!(4, f32);
+                            for (d, s) in dest[0..3].iter_mut().zip(src!().iter()) { *d = *s as f32 / 0xFFFF as f32; }
+                            dest[3] = 1.0;
+                        }),
 
                         _ => panic!("Unsupported conversion case: {:?} -> {:?}.", src_pix_fmt, dest_img.pix_fmt)
                     }
@@ -1319,6 +1382,12 @@ impl Image {
                         PixelFormat::RGB16 =>
                             convert_whole_line!(
                             { for i in 0..3 { dest!(3, u16)[i] = (src!()[i] * 0xFFFF as f32) as u16; } }),
+
+                        PixelFormat::RGBA32f => convert_whole_line!({
+                            let dest = dest!(4, f32);
+                            for (d, s) in dest[0..3].iter_mut().zip(src!().iter()) { *d = *s; }
+                            dest[3] = 1.0;
+                        }),
 
                         PixelFormat::RGB64f =>
                             convert_whole_line!(
@@ -1364,6 +1433,12 @@ impl Image {
                         PixelFormat::RGB32f =>
                             convert_whole_line!(
                             { for i in 0..3 { dest!(3, f32)[i] = src!()[i] as f32; } }),
+
+                        PixelFormat::RGBA32f => convert_whole_line!({
+                            let dest = dest!(4, f32);
+                            for (d, s) in dest[0..3].iter_mut().zip(src!().iter()) { *d = *s as f32; }
+                            dest[3] = 1.0;
+                        }),
 
                         _ => panic!("Unsupported conversion case: {:?} -> {:?}.", src_pix_fmt, dest_img.pix_fmt)
                     }
