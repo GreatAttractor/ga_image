@@ -552,7 +552,7 @@ impl Image {
     /// For a Mono8 image, returns pixels starting from `start` coordinates.
     pub fn mono8_pixels_from(&self, start: [i32; 2]) -> &[u8] {
         assert!(self.pix_fmt == PixelFormat::Mono8);
-        &self.pixels[(start[X] as usize) * self.bytes_per_line + start[X] as usize ..]
+        &self.pixels[(start[Y] as usize) * self.bytes_per_line + start[X] as usize ..]
     }
 
     /// Returns all pixels as raw bytes (regardless of pixel format).
