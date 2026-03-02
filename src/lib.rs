@@ -51,6 +51,9 @@ pub enum PixelFormat {
     /// 8 bits per pixel, values from a 256-entry palette.
     Pal8,
     Mono8,
+
+    MonoA8,
+
     /// LSB = R, MSB = B.
     RGB8,
     RGBA8,
@@ -112,6 +115,7 @@ impl PixelFormat {
         match *self {
             PixelFormat::Pal8     |
             PixelFormat::Mono8    |
+            PixelFormat::MonoA8   |
             PixelFormat::RGB8     |
             PixelFormat::RGBA8    |
             PixelFormat::BGR8     |
@@ -214,6 +218,8 @@ impl PixelFormat {
             PixelFormat::CfaGBRG16 |
             PixelFormat::CfaBGGR16 => 1,
 
+            PixelFormat::MonoA8 => 2,
+
             PixelFormat::RGB8   |
             PixelFormat::BGR8   |
             PixelFormat::RGB16  |
@@ -229,7 +235,9 @@ impl PixelFormat {
 
     pub fn bytes_per_pixel(&self) -> usize {
         match self {
-            PixelFormat::Pal8 | PixelFormat::Mono8 => 1,
+            PixelFormat::Pal8 |
+            PixelFormat::Mono8 |
+            PixelFormat::MonoA8 => 1,
 
             PixelFormat::CfaRGGB8 |
             PixelFormat::CfaGRBG8 |
@@ -295,6 +303,7 @@ fn verify_pix_type<T: Default + Any>(pix_fmt: PixelFormat) {
     match pix_fmt {
         PixelFormat::Pal8     |
         PixelFormat::Mono8    |
+        PixelFormat::MonoA8   |
         PixelFormat::RGB8     |
         PixelFormat::RGBA8    |
         PixelFormat::BGR8     |
@@ -532,7 +541,6 @@ impl Image {
         }
     }
 
-
     /// Returns mutable pixels (including row padding, if any).
     ///
     /// `T` must correspond to the image's pixel format.
@@ -679,6 +687,7 @@ impl Image {
             PixelFormat::Pal8 => panic!(),
 
             PixelFormat::Mono8    |
+            PixelFormat::MonoA8   |
             PixelFormat::RGB8     |
             PixelFormat::RGBA8    |
             PixelFormat::BGR8     |
@@ -931,6 +940,19 @@ impl Image {
 
                         PixelFormat::RGB16 =>
                             convert_whole_line!({ for i in dest!(3, u16) { *i = (self.pixels[src_ofs] as u16) << 8; } }),
+
+                        _ => panic!("Unsupported conversion case: {:?} -> {:?}.", src_pix_fmt, dest_img.pix_fmt)
+                    }
+                },
+
+                PixelFormat::MonoA8 => {
+                    match dest_img.pix_fmt {
+                        PixelFormat::RGBA8 | PixelFormat::BGRA8 =>
+                            convert_whole_line!({
+                                let dest = dest!(4, u8);
+                                dest[3] = self.pixels[src_ofs + 1];
+                                for i in 0..3 { dest[i] = self.pixels[src_ofs]; }
+                            }),
 
                         _ => panic!("Unsupported conversion case: {:?} -> {:?}.", src_pix_fmt, dest_img.pix_fmt)
                     }
