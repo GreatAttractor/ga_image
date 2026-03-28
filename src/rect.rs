@@ -49,20 +49,41 @@ impl Rect {
     }
 
     pub fn intersection(&self, other: &Rect) -> Option<Rect> {
-        let pos = if self.contains_point(other.pos()) {
-            other.pos()
-        } else if other.contains_point(self.pos()) {
-            self.pos()
-        } else {
-            return None;
-        };
+        let min_x = self.x.max(other.x);
+        let min_y = self.y.max(other.y);
 
         let max_x = (self.x + self.width as i32).min(other.x + other.width as i32);
         let max_y = (self.y + self.height as i32).min(other.y + other.height as i32);
 
-        let width = (max_x - pos[X]) as u32;
-        let height = (max_y - pos[Y]) as u32;
+        let width = (max_x - min_x) as u32;
+        let height = (max_y - min_y) as u32;
 
-        Some(Rect{ x: pos[X], y: pos[Y], width, height })
+        Some(Rect{ x: min_x, y: min_y, width, height })
+    }
+}
+
+mod tests {
+    use super::Rect;
+
+    #[test]
+    fn rect_intersection() {
+        const W: u32 = 10;
+        const H: u32 = 7;
+
+        let r1 = Rect{ x: 0, y: 0, width: W, height: H };
+        let r2 = Rect{ x: 0, y: 0, width: W, height: H };
+        assert_eq!(Rect{ x: 0, y: 0, width: W, height: H}, r1.intersection(&r2).unwrap());
+
+        let r1 = Rect{ x: 0, y: 0, width: W, height: H };
+        let r2 = Rect{ x: 3, y: 3, width: W, height: H };
+        assert_eq!(Rect{ x: 3, y: 3, width: W - 3, height: H - 3}, r1.intersection(&r2).unwrap());
+
+        let r1 = Rect{ x: 0, y: 0, width: W, height: H };
+        let r2 = Rect{ x: 3, y: -3, width: W, height: H };
+        assert_eq!(Rect{ x: 3, y: 0, width: W - 3, height: H - 3}, r1.intersection(&r2).unwrap());
+
+        let r1 = Rect{ x: 0, y: 0, width: W, height: H };
+        let r2 = Rect{ x: -3, y: 3, width: W, height: H };
+        assert_eq!(Rect{ x: 0, y: 3, width: W - 3, height: H - 3}, r1.intersection(&r2).unwrap());
     }
 }
