@@ -1514,6 +1514,11 @@ impl Image {
         self.convert_pix_fmt_of_subimage(dest_pix_fmt, [0, 0], self.width, self.height, demosaic_method)
     }
 
+    /// Returns image converted to specified pixel format (no-op if the format is the same).
+    pub fn into_pix_fmt(self, dest_pix_fmt: PixelFormat, demosaic_method: Option<DemosaicMethod>) -> Image {
+        if self.pix_fmt == dest_pix_fmt { self } else { self.convert_pix_fmt(dest_pix_fmt, demosaic_method) }
+    }
+
     /// Returns a copy of image's fragment. The fragment boundaries may extend outside of the image.
     ///
     /// The fragment to copy is `width`x`height` pixels and starts at `src_pos`.
