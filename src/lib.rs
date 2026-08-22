@@ -141,6 +141,7 @@ impl PixelFormat {
 
     pub fn is_mono(&self) -> bool {
         [PixelFormat::Mono8,
+         PixelFormat::MonoA8,
          PixelFormat::Mono16,
          PixelFormat::Mono32f,
          PixelFormat::Mono64f].contains(&self)
@@ -236,14 +237,14 @@ impl PixelFormat {
     pub fn bytes_per_pixel(&self) -> usize {
         match self {
             PixelFormat::Pal8 |
-            PixelFormat::Mono8 |
-            PixelFormat::MonoA8 => 1,
+            PixelFormat::Mono8 => 1,
 
             PixelFormat::CfaRGGB8 |
             PixelFormat::CfaGRBG8 |
             PixelFormat::CfaGBRG8 |
             PixelFormat::CfaBGGR8 => 1,
 
+            PixelFormat::MonoA8 |
             PixelFormat::CfaRGGB16 |
             PixelFormat::CfaGRBG16 |
             PixelFormat::CfaGBRG16 |
